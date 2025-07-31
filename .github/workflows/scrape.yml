@@ -1,7 +1,8 @@
 name: Scrape M3U8 URL
 
 on:
-  workflow_dispatch:  # Allows manual trigger
+  schedule:
+    - cron: '*/5 * * * *'  # Every 5 minutes
 
 jobs:
   scrape:
