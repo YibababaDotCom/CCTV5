@@ -1,0 +1,33 @@
+name: Save M3U8 Stream
+
+on:
+  workflow_dispatch:  # Manual trigger
+  schedule:
+    - cron: '*/5 * * * *'  # Every 5 minutes
+
+jobs:
+  scrape-and-save:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install Puppeteer
+      run: npm install puppeteer
+
+    - name: Run Puppeteer script
+      run: node puppeteer-script.js
+
+    - name: Commit updated .m3u8 file
+      run: |
+        git config --global user.name "GitHub Action"
+        git config --global user.email "action@github.com"
+        git add latest.m3u8
+        git commit -m "Update stream URL"
+        git push
