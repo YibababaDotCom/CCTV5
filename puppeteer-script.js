@@ -1,3 +1,4 @@
+const fs = require('fs');
 const puppeteer = require('puppeteer');
 
 (async () => {
@@ -14,6 +15,13 @@ const puppeteer = require('puppeteer');
     return null;
   });
 
-  console.log("Stream URL:", streamUrl);
   await browser.close();
+
+  if (streamUrl) {
+    fs.writeFileSync('latest.m3u8', streamUrl);
+    console.log("Saved stream URL to latest.m3u8:", streamUrl);
+  } else {
+    console.error("Stream URL not found.");
+    process.exit(1);
+  }
 })();
