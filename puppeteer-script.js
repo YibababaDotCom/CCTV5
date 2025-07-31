@@ -1,0 +1,19 @@
+const puppeteer = require('puppeteer');
+
+(async () => {
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+  await page.goto('https://huaren.live/viv/detail/id/536/nid/1.html', { waitUntil: 'networkidle2' });
+
+  const streamUrl = await page.evaluate(() => {
+    const scripts = Array.from(document.getElementsByTagName('script'));
+    for (const script of scripts) {
+      const match = script.textContent.match(/url=(https[^']+)/);
+      if (match) return decodeURIComponent(match[1]);
+    }
+    return null;
+  });
+
+  console.log("Stream URL:", streamUrl);
+  await browser.close();
+})();
