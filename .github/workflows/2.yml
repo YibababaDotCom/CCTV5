@@ -1,0 +1,55 @@
+name: Fetch M3U8 Link
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  fetch-and-save:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Fetch webpage source
+      id: fetch_source
+      run: |
+        set -x
+        WEB_URL="https://huaren.live/viv/detail/id/536/nid/2.html"
+        echo "Fetching: $WEB_URL"
+        SOURCE_CODE=$(curl -s "$WEB_URL")
+        echo "$SOURCE_CODE" > webpage_source.html
+
+    - name: Extract M3U8 link
+      id: extract_m3u8
+      run: |
+        set -x
+        RAW_URL=$(grep -oP "url=https:\/\/live\.huarenlivewebsite\.top\/h264\/CCTV5\.m3u8\?auth=[^']+" webpage_source.html)
+        if [ -n "$RAW_URL" ]; then
+          M3U8_PATH=$(echo "$RAW_URL" | sed -E "s/^url=(.*)/\2/")
+        else
+          M3U8_PATH=$(grep -oP "playUrl = '([^']+)'" webpage_source.html | sed -E "s/^playUrl = '(.*)'/\2/")
+        fi
+
+        if [ -z "$M3U8_PATH" ]; then
+          echo "Error: M3U8 link not found."
+          exit 1
+        fi
+
+        # Write standard M3U8 format to file
+        echo "#EXTM3U" > 2.m3u8
+        echo "#EXT-X-VERSION:3" >> 2.m3u8
+        echo "#EXT-X-STREAM-INF:BANDWIDTH=800000" >> 2.m3u8
+        echo "$M3U8_PATH" >> 2.m3u8
+
+    - name: Commit and push M3U8 file
+      run: |
+        set -x
+        git config user.name "GitHub Actions"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add 2.m3u8
+        git commit -m "Update latest.m3u8 with formatted link" || echo "No changes to commit"
+        git push
