@@ -68,7 +68,12 @@ jobs:
         fi
 
         echo "Final M3U8 link to be saved: $M3U8_PATH"
-        echo "$M3U8_PATH" > latest.m3u8
+        # Write standard M3U8 headers
+echo "#EXTM3U" > latest.m3u8
+echo "#EXT-X-VERSION:3" >> latest.m3u8
+echo "#EXT-X-STREAM-INF:BANDWIDTH=800000" >> latest.m3u8
+echo "$M3U8_PATH" >> latest.m3u8
+
         echo "Content of latest.m3u8 after write:"
         cat latest.m3u8 # Verify content
 
