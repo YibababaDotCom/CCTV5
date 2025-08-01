@@ -1,4 +1,4 @@
-name: Fetch M3U8 Link
+name: Fetch M3U8 Link 1
 
 on:
   schedule:
