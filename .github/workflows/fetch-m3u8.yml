@@ -42,9 +42,9 @@ jobs:
         EXTRACTED_M3U8=""
         if [ -n "$M3U8_RAW_MATCH" ]; then
           # Use sed to extract only the URL from the matched string
-          EXTRACTED_M3U3=$(echo "$M3U3_RAW_MATCH" | sed -E "s/.*url=(https:\/\/live\.huarenlivewebsite\.top\/stream\/CCTV5_MG\.m3u8\?auth=[^']+)'/\1/")
-          echo "Extracted M3U8 link after sed from raw match: $EXTRACTED_M3U3"
-          EXTRACTED_M3U8="$EXTRACTED_M3U8"
+          # Corrected typo: M3U3 to M3U8
+          EXTRACTED_M3U8=$(echo "$M3U8_RAW_MATCH" | sed -E "s/.*url=(https:\/\/live\.huarenlivewebsite\.top\/stream\/CCTV5_MG\.m3u8\?auth=[^']+)'/\1/")
+          echo "Extracted M3U8 link after sed from raw match: $EXTRACTED_M3U8"
         else
           echo "No raw match found with original regex. Trying simpler regex directly for the URL."
           # Try a simpler regex to directly capture the URL
@@ -59,12 +59,15 @@ jobs:
 
         echo "Final M3U8 link to be formatted: $EXTRACTED_M3U8"
 
-        # Construct the M3U8 content
-        M3U8_CONTENT="#EXTM3U
+        # Construct the M3U8 content using YAML's literal block scalar |
+        # Ensure the indentation of the content matches the start of the 'echo' command.
+        M3U8_CONTENT=$(cat <<EOF
+#EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-STREAM-INF:BANDWIDTH=500000
-$EXTRACTED_M3U8"
-
+$EXTRACTED_M3U8
+EOF
+)
         echo "--- Content to be written to latest.m3u8 ---"
         echo "$M3U8_CONTENT"
         echo "--- End of content ---"
