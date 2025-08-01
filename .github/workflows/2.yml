@@ -29,9 +29,9 @@ jobs:
         set -x
         RAW_URL=$(grep -oP "url=https:\/\/live\.huarenlivewebsite\.top\/h264\/CCTV5\.m3u8\?auth=[^']+" webpage_source.html)
         if [ -n "$RAW_URL" ]; then
-          M3U8_PATH=$(echo "$RAW_URL" | sed -E "s/^url=(.*)/\2/")
+          M3U8_PATH=$(echo "$RAW_URL" | sed -E "s/^url=(.*)/\1/")
         else
-          M3U8_PATH=$(grep -oP "playUrl = '([^']+)'" webpage_source.html | sed -E "s/^playUrl = '(.*)'/\2/")
+          M3U8_PATH=$(grep -oP "playUrl = '([^']+)'" webpage_source.html | sed -E "s/^playUrl = '(.*)'/\1/")
         fi
 
         if [ -z "$M3U8_PATH" ]; then
