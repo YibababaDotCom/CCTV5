@@ -49,13 +49,13 @@ jobs:
 $EXTRACTED_M3U8
 EOF
 
-      - name: Commit and push M3U8 file
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -x
-          git config user.name "GitHub Actions"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add output/latest.m3u8
-          git commit -m "🔁 Update M3U8 link"
-          git push
+     - name: Commit and push M3U8 file
+  run: |
+    set -x
+    git config user.name "GitHub Actions"
+    git config user.email "github-actions[bot]@users.noreply.github.com"
+    git add output/latest.m3u8
+    git commit -m "🔁 Update M3U8 link"
+    git push
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
