@@ -17,71 +17,39 @@ jobs:
     - name: Fetch webpage source
       id: fetch_source
       run: |
-        set -x # Enable debugging for this step
+        set -x
         WEB_URL="https://huaren.live/viv/detail/id/536/nid/1.html"
-        echo "Attempting to fetch URL: $WEB_URL"
+        echo "Fetching: $WEB_URL"
         SOURCE_CODE=$(curl -s "$WEB_URL")
-        echo "--- Start of fetched source code (first 500 chars) ---"
-        echo "${SOURCE_CODE:0:500}" # Print first 500 characters
-        echo "--- End of fetched source code snippet ---"
         echo "$SOURCE_CODE" > webpage_source.html
-        echo "Source code fetched and saved to webpage_source.html"
-        # Verify file content
-        echo "Content of webpage_source.html:"
-        cat webpage_source.html | head -n 20 # Print first 20 lines of the file
 
     - name: Extract M3U8 link
       id: extract_m3u8
       run: |
-        set -x # Enable debugging for this step
-        echo "Attempting to extract M3U8 link from webpage_source.html"
-
-        # Original regex (we'll try to refine if needed)
-        M3U8_PATH=$(grep -oP "playUrl = '/static/ds3/dplayer.php\?url=https:\/\/live\.huarenlivewebsite\.top\/stream\/CCTV5_MG\.m3u8\?auth=[^']+'" webpage_source.html)
-        echo "Result of initial grep -oP: $M3U8_PATH"
-
-        # Let's try to get just the URL part if grep -oP is too greedy or fails
-        # This regex looks for the URL directly after 'url=' and before the next single quote.
+        set -x
         RAW_URL=$(grep -oP "url=https:\/\/live\.huarenlivewebsite\.top\/stream\/CCTV5_MG\.m3u8\?auth=[^']+" webpage_source.html)
-        echo "Result of simpler grep -oP for raw URL: $RAW_URL"
-
-        # Now, refine with sed to get just the URL from RAW_URL if it exists
-        if [ -n "$RAW_URL" ]; then # Check if RAW_URL is not empty
-          EXTRACTED_M3U8=$(echo "$RAW_URL" | sed -E "s/^url=(.*)/\1/")
-          echo "Extracted M3U8 link after sed: $EXTRACTED_M3U8"
-          M3U8_PATH="$EXTRACTED_M3U8"
+        if [ -n "$RAW_URL" ]; then
+          M3U8_PATH=$(echo "$RAW_URL" | sed -E "s/^url=(.*)/\1/")
         else
-          echo "No raw URL found with simpler grep. Re-evaluating original regex and source."
-          # Fallback to original M3U8_PATH if raw URL extraction failed
-          # The original M3U8_PATH already holds the result of the first grep,
-          # so we just need to process it.
-          if [ -n "$M3U8_PATH" ]; then # Check if original grep found something
-            EXTRACTED_M3U8_FROM_ORIGINAL=$(echo "$M3U3_PATH" | sed -E "s/.*url=(https:\/\/live\.huarenlivewebsite\.top\/stream\/CCTV5_MG\.m3u8\?auth=[^']+)'/\1/")
-            echo "Extracted M3U8 link from original grep result: $EXTRACTED_M3U8_FROM_ORIGINAL"
-            M3U8_PATH="$EXTRACTED_M3U3_FROM_ORIGINAL"
-          fi
+          M3U8_PATH=$(grep -oP "playUrl = '([^']+)'" webpage_source.html | sed -E "s/^playUrl = '(.*)'/\1/")
         fi
 
         if [ -z "$M3U8_PATH" ]; then
-          echo "Error: M3U8 link not found in the source code using any method."
+          echo "Error: M3U8 link not found."
           exit 1
         fi
 
-        echo "Final M3U8 link to be saved: $M3U8_PATH"
-        # Write standard M3U8 headers
-echo "#EXTM3U" > latest.m3u8
-echo "#EXT-X-VERSION:3" >> latest.m3u8
-echo "#EXT-X-STREAM-INF:BANDWIDTH=800000" >> latest.m3u8
-echo "$M3U8_PATH" >> latest.m3u8
-
-        echo "Content of latest.m3u8 after write:"
-        cat latest.m3u8 # Verify content
+        # Write standard M3U8 format to file
+        echo "#EXTM3U" > latest.m3u8
+        echo "#EXT-X-VERSION:3" >> latest.m3u8
+        echo "#EXT-X-STREAM-INF:BANDWIDTH=800000" >> latest.m3u8
+        echo "$M3U8_PATH" >> latest.m3u8
 
     - name: Commit and push M3U8 file
       run: |
-        set -x # Enable debugging for this step
+        set -x
         git config user.name "GitHub Actions"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git add latest.m3u8
-        git commit -m "Update latest.m3u8 with new link" || echo "No changes to commit"
+        git commit -m "Update latest.m3u8 with formatted link" || echo "No changes to commit"
         git push
