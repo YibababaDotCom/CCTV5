@@ -1,0 +1,43 @@
+name: Fetch M3U8 Link
+
+on:
+  schedule:
+    # Runs every hour
+    - cron: '0 * * * *'
+  workflow_dispatch: # Allows manual triggering of the workflow
+
+jobs:
+  fetch-and-save:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Fetch webpage source
+      id: fetch_source
+      run: |
+        WEB_URL="https://huaren.live/viv/detail/id/536/nid/1.html"
+        SOURCE_CODE=$(curl -s "$WEB_URL")
+        echo "$SOURCE_CODE" > webpage_source.html
+        echo "Source code fetched and saved to webpage_source.html"
+
+    - name: Extract M3U8 link
+      id: extract_m3u8
+      run: |
+        M3U8_PATH=$(grep -oP "playUrl = '/static/ds3/dplayer.php\?url=https:\/\/live\.huarenlivewebsite\.top\/stream\/CCTV5_MG\.m3u8\?auth=[^']+'" webpage_source.html | sed -E "s/.*url=(https:\/\/live\.huarenlivewebsite\.top\/stream\/CCTV5_MG\.m3u8\?auth=[^']+)'/\1/")
+
+        if [ -z "$M3U8_PATH" ]; then
+          echo "Error: M3U8 link not found in the source code."
+          exit 1
+        fi
+
+        echo "Extracted M3U8 link: $M3U8_PATH"
+        echo "$M3U8_PATH" > latest.m3u8
+
+    - name: Commit and push M3U8 file
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add latest.m3u8
+        git commit -m "Update latest.m3u8 with new link" || echo "No changes to commit"
+        git push
