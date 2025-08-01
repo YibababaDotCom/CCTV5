@@ -2,7 +2,7 @@ name: Fetch M3U8 Link
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '0 * * * *' # Runs hourly
   workflow_dispatch:
 
 jobs:
@@ -11,71 +11,51 @@ jobs:
     permissions:
       contents: write
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Fetch webpage source and debug
-      id: fetch_source
-      run: |
-        set -x # Enable debugging for this step
-        WEB_URL="https://huaren.live/viv/detail/id/536/nid/1.html"
-        echo "Attempting to fetch URL: $WEB_URL"
-        SOURCE_CODE=$(curl -s "$WEB_URL")
-        echo "--- Start of fetched source code (first 500 chars) ---"
-        echo "${SOURCE_CODE:0:500}"
-        echo "--- End of fetched source code snippet ---"
-        echo "$SOURCE_CODE" > webpage_source.html
-        echo "Source code fetched and saved to webpage_source.html"
-        echo "Content of webpage_source.html:"
-        cat webpage_source.html | head -n 20
+      - name: Prepare output directory
+        run: mkdir -p output
 
-    - name: Extract M3U8 link and debug
-      id: extract_m3u8
-      run: |
-        set -x # Enable debugging for this step
-        echo "Attempting to extract M3U8 link from webpage_source.html"
+      - name: Fetch webpage source with error handling
+        run: |
+          set -x
+          WEB_URL="https://huaren.live/viv/detail/id/536/nid/1.html"
+          echo "Fetching source from $WEB_URL..."
+          SOURCE_CODE=$(curl -s --fail "$WEB_URL") || {
+            echo "❌ Failed to fetch webpage."
+            exit 1
+          }
+          echo "${SOURCE_CODE:0:500}" > output/debug.log
+          echo "$SOURCE_CODE" > output/webpage_source.html
 
-        # Try the original regex first
-        M3U8_RAW_MATCH=$(grep -oP "playUrl = '/static/ds3/dplayer.php\?url=https:\/\/live\.huarenlivewebsite\.top\/stream\/CCTV5_MG\.m3u8\?auth=[^']+'" webpage_source.html)
-        echo "Result of initial grep -oP: $M3U8_RAW_MATCH"
+      - name: Extract M3U8 link
+        run: |
+          set -x
+          echo "Extracting M3U8 link from source..."
+          EXTRACTED_M3U8=$(grep -oP "https:\/\/[^'\"]+\.m3u8\?auth=[^'\"]+" output/webpage_source.html)
 
-        EXTRACTED_M3U8=""
-        if [ -n "$M3U8_RAW_MATCH" ]; then
-          # Use sed to extract only the URL from the matched string
-          EXTRACTED_M3U8=$(echo "$M3U8_RAW_MATCH" | sed -E "s/.*url=(https:\/\/live\.huarenlivewebsite\.top\/stream\/CCTV5_MG\.m3u8\?auth=[^']+)'/\1/")
-          echo "Extracted M3U8 link after sed from raw match: $EXTRACTED_M3U8"
-        else
-          echo "No raw match found with original regex. Trying simpler regex directly for the URL."
-          # Try a simpler regex to directly capture the URL
-          EXTRACTED_M3U8=$(grep -oP "https:\/\/live\.huarenlivewebsite\.top\/stream\/CCTV5_MG\.m3u8\?auth=[^']+" webpage_source.html)
-          echo "Extracted M3U8 link with simpler grep: $EXTRACTED_M3U8"
-        fi
+          if [ -z "$EXTRACTED_M3U8" ]; then
+            echo "❌ M3U8 link not found."
+            exit 1
+          fi
 
-        if [ -z "$EXTRACTED_M3U8" ]; then
-          echo "Error: M3U8 link not found in the source code using any method."
-          exit 1
-        fi
+          echo "✅ M3U8 link: $EXTRACTED_M3U8"
 
-        echo "Final M3U8 link to be formatted: $EXTRACTED_M3U8"
-
-        # Directly write the M3U8 content to the file using a here-document
-        # This simplifies the variable assignment and avoids potential YAML/shell interaction issues.
-        echo "--- Writing to latest.m3u8 ---"
-        cat <<EOF > latest.m3u8
+          cat <<EOF > output/latest.m3u8
 #EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-STREAM-INF:BANDWIDTH=500000
 $EXTRACTED_M3U8
 EOF
 
-        echo "Content of latest.m3u8 after write:"
-        cat latest.m3u8 # Verify content
-
-    - name: Commit and push M3U8 file
-      run: |
-        set -x # Enable debugging for this step
-        git config user.name "GitHub Actions"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add latest.m3u8
-        git commit -m "Update latest.m3u8 with new link" || echo "No changes to commit"
-        git push
+      - name: Commit and push M3U8 file
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -x
+          git config user.name "GitHub Actions"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add output/latest.m3u8
+          git commit -m "🔁 Update M3U8 link"
+          git push
