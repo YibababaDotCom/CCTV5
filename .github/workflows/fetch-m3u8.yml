@@ -2,13 +2,14 @@ name: Fetch M3U8 Link
 
 on:
   schedule:
-    # Runs every hour
     - cron: '0 * * * *'
-  workflow_dispatch: # Allows manual triggering of the workflow
+  workflow_dispatch:
 
 jobs:
   fetch-and-save:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # <--- ADD THIS LINE
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -31,8 +32,8 @@ jobs:
           exit 1
         fi
 
-        echo "Extracted M3U8 link: $M3U8_PATH"
-        echo "$M3U8_PATH" > latest.m3u8
+        echo "Extracted M3U8 link: $M3U3_PATH"
+        echo "$M3U3_PATH" > latest.m3u8
 
     - name: Commit and push M3U8 file
       run: |
