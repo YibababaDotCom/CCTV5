@@ -25,19 +25,17 @@ def extract_urls(input_url):
         response.raise_for_status()
         content = response.text
 
-        # 匹配所有 "频道名,链接" 的组合
-        # 这个正则表达式会找到所有以 m3u8 结尾的链接，并捕获前面的频道名
-        pattern = re.compile(r'(CCTV\d.*?,http[s]?://.*?\.m3u8)', re.IGNORECASE)
+        # 优化后的正则表达式，用于匹配所有 "频道名,链接" 的组合
+        # 它会精确地从一长串字符串中识别出每一个独立的条目
+        pattern = re.compile(r'(CCTV\d\+?),((?:http|https|rtsp|rtmp):\/\/[^\s,]+?\.m3u8)', re.IGNORECASE)
         found_matches = pattern.findall(content)
 
         cctv5_urls = []
         for match in found_matches:
-            # 分割匹配到的字符串，检查频道名是否包含 "CCTV5"
-            parts = match.split(',', 1)
-            if len(parts) == 2:
-                channel, url = parts
-                if "CCTV5" in channel.upper():
-                    cctv5_urls.append(url.strip()) # strip() 移除可能的空白
+            # match 现在是一个包含 (频道名, 链接) 的元组
+            channel_name, url = match
+            if "CCTV5" in channel_name.upper():
+                cctv5_urls.append(url.strip()) # strip() 移除可能的空白
 
         return cctv5_urls
     
@@ -54,6 +52,7 @@ def main(input_urls, output_file):
         all_urls.extend(extract_urls(url))
 
     valid_urls = []
+    # 使用 set 去重
     for url in set(all_urls):
         if test_m3u8_url(url):
             valid_urls.append(url)
@@ -66,6 +65,8 @@ def main(input_urls, output_file):
     print(f"Successfully saved {len(valid_urls)} valid CCTV5 URLs to {output_file}")
     
     if not valid_urls:
+        # 如果没有找到任何有效链接，则不创建文件，并让工作流失败
+        print("No valid CCTV5 links were found.", file=sys.stderr)
         sys.exit(1)
 
 if __name__ == "__main__":
