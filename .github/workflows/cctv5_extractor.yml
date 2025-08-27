@@ -1,0 +1,42 @@
+name: Extract and Test CCTV5 Links
+
+on:
+  schedule:
+    # 每天 UTC 时间 0:00 运行
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    # 允许手动触发
+
+jobs:
+  extract-and-save:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Extract and test URLs
+        run: |
+          python scripts/extract_and_test.py cctv5_links.txt \
+          https://cdn.jsdelivr.net/gh/Cx4x/xd/output/user_result.txt \
+          https://git.acwing.com/ip/iptv/-/blob/main/IPV6.txt \
+          https://raw.githubusercontent.com/VinsonGuo/m3u_playlist/refs/heads/main/all_channels.m3u
+
+      - name: Commit and push if file changed
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 检查文件是否有更新
+          git add cctv5_links.txt
+          git diff --cached --exit-code || git commit -m "Update CCTV5 live links"
+          git push
