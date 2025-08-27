@@ -9,18 +9,38 @@ jobs:
   extract-and-save:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Add this line to grant write access
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # ... (the rest of your steps remain the same)
-      
-      - name: Commit and push if file changed
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          git add cctv5_links.txt
-          git diff --cached --exit-code || git commit -m "Update CCTV5 live links"
-          git push
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Extract and test URLs
+        run: |
+          python scripts/extract_and_test.py cctv5_links.txt \
+          https://cdn.jsdelivr.net/gh/Cx4x/xd/output/user_result.txt \
+          https://git.acwing.com/ip/iptv/-/blob/main/IPV6.txt \
+          https://raw.githubusercontent.com/VinsonGuo/m3u_playlist/refs/heads/main/all_channels.m3u
+
+      - name: Commit and push if file changed
+        # 这个步骤只有在文件存在时才会执行
+        run: |
+          if [ -f "cctv5_links.txt" ]; then
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            
+            git add cctv5_links.txt
+            git diff --cached --exit-code || git commit -m "Update CCTV5 live links"
+            git push
+          else
+            echo "cctv5_links.txt was not created. No changes to commit."
+          fi
