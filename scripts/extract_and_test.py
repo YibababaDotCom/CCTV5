@@ -8,6 +8,7 @@ def test_m3u8_url(url):
     测试一个m3u8链接是否有效。
     """
     try:
+        # 使用 HEAD 请求来快速验证链接，不下载整个文件
         response = requests.head(url, timeout=5)
         response.raise_for_status()
         return True
@@ -23,10 +24,22 @@ def extract_urls(input_url):
         response = requests.get(input_url, timeout=10)
         response.raise_for_status()
         content = response.text
-        
-        # 匹配CCTV5的m3u8链接
-        urls = re.findall(r'.*?CCTV5.*?(https?://.*?\.m3u8)', content, re.IGNORECASE)
-        return urls
+
+        # 匹配所有 "频道名,链接" 的组合
+        # 这个正则表达式会找到所有以 m3u8 结尾的链接，并捕获前面的频道名
+        pattern = re.compile(r'(CCTV\d.*?,http[s]?://.*?\.m3u8)', re.IGNORECASE)
+        found_matches = pattern.findall(content)
+
+        cctv5_urls = []
+        for match in found_matches:
+            # 分割匹配到的字符串，检查频道名是否包含 "CCTV5"
+            parts = match.split(',', 1)
+            if len(parts) == 2:
+                channel, url = parts
+                if "CCTV5" in channel.upper():
+                    cctv5_urls.append(url.strip()) # strip() 移除可能的空白
+
+        return cctv5_urls
     
     except requests.exceptions.RequestException as e:
         print(f"Error downloading the file from {input_url}: {e}", file=sys.stderr)
@@ -37,12 +50,10 @@ def main(input_urls, output_file):
     从多个URL提取CCTV5的m3u8链接，测试并保存到文件。
     """
     all_urls = []
-    # 遍历所有输入的URL
     for url in input_urls:
         all_urls.extend(extract_urls(url))
 
     valid_urls = []
-    # 对所有提取到的链接进行去重和测试
     for url in set(all_urls):
         if test_m3u8_url(url):
             valid_urls.append(url)
@@ -55,7 +66,7 @@ def main(input_urls, output_file):
     print(f"Successfully saved {len(valid_urls)} valid CCTV5 URLs to {output_file}")
     
     if not valid_urls:
-        sys.exit(1) # 如果没有找到有效链接，返回非零状态码，工作流会标记为失败
+        sys.exit(1)
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
