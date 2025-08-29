@@ -29,6 +29,7 @@ jobs:
           python scripts/extract_and_test.py cctv5_links.txt \
           https://cdn.jsdelivr.net/gh/Cx4x/xd/output/user_result.txt \
           https://git.acwing.com/ip/iptv/-/blob/main/IPV6.txt \
+          https://raw.githubusercontent.com/Guovin/TV/gd/output/result.txt \
           https://raw.githubusercontent.com/VinsonGuo/m3u_playlist/refs/heads/main/all_channels.m3u
 
       - name: Commit and push if file changed
